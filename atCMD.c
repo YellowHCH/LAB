@@ -9,6 +9,8 @@
 #include <xdc/runtime/Memory.h>
 #include <xdc/runtime/Error.h>
 #include "ti/sysbios/fatfs/ff.h"
+#include "soc_C6748.h"
+#include "gpio.h"
 #include "uartStdio.h"
 #include "client.h"
 
@@ -148,63 +150,71 @@ void adc2203RD(char *wfileName,int wFlag)
 
 void atCODACLK(unsigned char *cmdArg)
 {
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	printf("cmd = CODACLK\n") ;
-		if(strcmp(cmdArg,"1") == 0) {
-			swCODAC_CLK(1) ;
-			UARTPuts("\r\nOK\r\n",-1) ;
-		}
-		else if (strcmp(cmdArg,"0") == 0) {
-			swCODAC_CLK(0) ;
-			UARTPuts("\r\nOK\r\n",-1) ;
-		}
-		else {
-			UARTPuts("\r\n",-1) ;
-			printf("Invalid command argument\n") ;
-		}
+	if(strcmp(cmdArg,"1") == 0) {
+		swCODAC_CLK(1) ;
+		UART1Puts("\nOK\n",-1) ;
+	}
+	else if (strcmp(cmdArg,"0") == 0) {
+		swCODAC_CLK(0) ;
+		UART1Puts("\nOK\n",-1) ;
+	}
+	else {
+		UART1Puts("\n",-1) ;
+		printf("Invalid command argument\n") ;
+	}
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
 
 void atDACLK(unsigned char *cmdArg)
 {
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	printf("cmd = DACLK\n") ;
 	if(strcmp(cmdArg,"1") == 0) {
 		swDAC_CLK(1) ;
-		UARTPuts("\r\nOK\r\n",-1) ;
+		UART1Puts("\nOK\n",-1) ;
 	}
 	else if (strcmp(cmdArg,"0") == 0) {
 		swDAC_CLK(0) ;
-		UARTPuts("\r\nOK\r\n",-1) ;
+		UART1Puts("\nOK\n",-1) ;
 	}
 	else {
-		UARTPuts("\r\n",-1) ;
+		UART1Puts("\n",-1) ;
 		printf("Invalid command argument\n") ;
 	}
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
 
 void atADCLK(unsigned char *cmdArg)
 {
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	printf("cmd = ADCLK\n") ;
 	if(strcmp(cmdArg,"1") == 0) {
 		swADC_CLK(1) ;
-		UARTPuts("\r\nOK\r\n",-1) ;
+		UART1Puts("\nOK\n",-1) ;
 	}
 	else if (strcmp(cmdArg,"0") == 0) {
 		swADC_CLK(0) ;
-		UARTPuts("\r\nOK\r\n",-1) ;
+		UART1Puts("\nOK\n",-1) ;
 	}
 	else {
-		UARTPuts("\r\n",-1) ;
+		UART1Puts("\n",-1) ;
 		printf("Invalid command argument\n") ;
 	}
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
 
 void atPING(unsigned char *cmdArg)
 {
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	printf("cmd = PING, Arg = %s \n",cmdArg) ;
 	if(*cmdArg == 0)
 		adc2203RD(NULL,0) ;
 	else
 		adc2203RD(cmdArg,1) ;
-	UARTPuts("\r\nOK\r\n",-1) ;
+	UART1Puts("\nOK\n",-1) ;
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
 
 // Turn ON/OFF TGC Mode
@@ -212,6 +222,7 @@ void atTGC(unsigned char *cmdArg)
 {
 	unsigned char oldVal,newVal ;
 
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	oldVal = FPGA_IO(0,255) ; // Read From FPGA
 	if (strcmp(cmdArg,"0") == 0) // TGC Turn OFF
 		newVal = oldVal | (0x01u << 0x04u) ;
@@ -222,17 +233,21 @@ void atTGC(unsigned char *cmdArg)
 		printf("Invalid command argument\n") ;
 	}
 	FPGA_IO(0,newVal) ;
-	UARTPuts("\r\nOK\r\n",-1) ;
+	UART1Puts("\nOK\n",-1) ;
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
 
 // Set Pulse Interval
 void atPUSINT(unsigned char *cmdArg)
 {
 	unsigned char pInterval ;
+
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	pInterval = (unsigned char)atoi(cmdArg) ;
 	printf("pulse interval = %d\n",pInterval) ;
 	FPGA_IO(1,pInterval) ;
-	UARTPuts("\r\nOK\r\n",-1) ;
+	UART1Puts("\nOK\n",-1) ;
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
 
 // Set Initial Gain
@@ -245,6 +260,7 @@ void atIGAIN(unsigned char *cmdArg)
 	unsigned char iGain,eGain ;
 	unsigned char rangeDuration ;
 
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	lG = LGain ;
 	hG = HGain ;
 	iGainV = atof(cmdArg) ;
@@ -263,7 +279,8 @@ void atIGAIN(unsigned char *cmdArg)
 	rampStep = (unsigned int)(c/(8*(h1-h2)))  ;
 	rangeDuration = (unsigned char)((c-2000)/2048) ;
 	setRamp(RxStartTime(0),rampStep,rangeDuration) ;
-	UARTPuts("\r\nOK\r\n",-1) ;
+	UART1Puts("\nOK\n",-1) ;
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
 
 // Set Final Gain
@@ -274,6 +291,7 @@ void atEGAIN(unsigned char *cmdArg)
 	unsigned int rampStep ;
 	unsigned char eGain, rangeDuration ;
 
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	lG = LGain ;
 	hG = HGain ;
 	eGainV = atof(cmdArg) ;
@@ -283,13 +301,14 @@ void atEGAIN(unsigned char *cmdArg)
 	a = 8000 + RxStartTime(0) * 512 ;
 	b = 16000+ RxEndTime(0) * 2048 ;
 	iGainV = (FPGA_IO(5,255)-2)*(hG-lG)/252 + lG ;
-	UARTPuts("\r\nOK\r\n",-1) ;
+	UART1Puts("\nOK\n",-1) ;
 	h1 = 252*(iGainV-lG) / (hG-lG) + 2 ;
 	h2 = 252*(eGainV-lG) / (hG-lG) + 2 ;
 	c = (b-a) ;
 	rampStep = (unsigned int)(-1*c/(8*(h2-h1)))  ;
 	rangeDuration = (unsigned char)((c-2000)/2048) ;
 	setRamp(RxStartTime(0),rampStep,rangeDuration) ;
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
 
 void atSDLS(void)
@@ -300,6 +319,7 @@ void atSDLS(void)
 	unsigned int filesLen,fLen ;
 	char *pch ;
 
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	path[0] = '/';
 	path[1] = '\0';
 	memset(flname,255,2400) ;
@@ -312,13 +332,14 @@ void atSDLS(void)
 	printf("%s endLen = %d\n",flname, filesLen) ;
 	pStr = flname ;
 	while(filesLen > 0) {
-		UARTPuts(pStr,-1) ;
-		UARTPuts("\r\n",-1) ;
+		UART1Puts(pStr,-1) ;
+		UART1Puts("\n",-1) ;
 		fLen = strlen(pStr)+1 ;
 		pStr += fLen ;
 		filesLen -= fLen ;
 	}
-	UARTPuts("OK\r\n",-1) ;
+	UART1Puts("OK\n",-1) ;
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
 
 // ATGLFM2=fc,f0,f1,gain,Tsig, ex: ATGLFM2=150,6,14,1,1
@@ -332,6 +353,7 @@ void atGLFM2(unsigned char *cmdArg)
 	long Ndat ;
 	unsigned char		*ydat ;
 
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	pch = (char *)strchr(cmdArg,',') ;
 	slen = pch - cmdArg ;
 	memcpy(sVal,cmdArg,slen) ;
@@ -375,9 +397,10 @@ void atGLFM2(unsigned char *cmdArg)
 	}
 
 	FPGA_IO(8,(unsigned char)(Ndat/256 + 16)) ; //Write DAC2Gain switch timing register
-	UARTPuts("\r\nOK\r\n",-1) ;
+	UART1Puts("\nOK\n",-1) ;
 	Semaphore_post(sem1);
 	Semaphore_pend(sem3, BIOS_WAIT_FOREVER);
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
 
 void atGLFM(unsigned char *cmdArg)
@@ -389,6 +412,7 @@ void atGLFM(unsigned char *cmdArg)
 	long Ndat ;
 	unsigned char		*ydat ;
 
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	pch = (char *)strchr(cmdArg,',') ;
 	slen = pch - cmdArg ;
 	memcpy(sVal,cmdArg,slen) ;
@@ -423,9 +447,10 @@ void atGLFM(unsigned char *cmdArg)
 	}
 
 	FPGA_IO(8,(unsigned char)(Ndat/256 + 16)) ; //Write DAC2Gain switch timing register
-	UARTPuts("\r\nOK\r\n",-1) ;
+	UART1Puts("\nOK\n",-1) ;
 	Semaphore_post(sem1);
 	Semaphore_pend(sem3, BIOS_WAIT_FOREVER);
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
 
 void atGCW(unsigned char *cmdArg)
@@ -438,6 +463,7 @@ void atGCW(unsigned char *cmdArg)
 	double  theta ;
 	unsigned char		*ydat ;
 
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	pch = (char *)strchr(cmdArg,',') ;
 	slen = pch - cmdArg ;
 	memcpy(sVal,cmdArg,slen) ;
@@ -465,9 +491,10 @@ void atGCW(unsigned char *cmdArg)
 
 	FPGA_IO(8,(unsigned char)(Ndat/256 + 16)) ; //Write DAC2Gain switch timing register
 
-	UARTPuts("\r\nOK\r\n",-1) ;
+	UART1Puts("\nOK\n",-1) ;
 	Semaphore_post(sem1);
 	Semaphore_pend(sem3, BIOS_WAIT_FOREVER);
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
 
 // Read from LS ADC AD7995
@@ -481,6 +508,7 @@ void atLSADC(unsigned char *cmdArg)
 	char buffer [20];
 	MsgObj  *msg ;
 
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	if (strcmp(cmdArg,"2") == 0)  {// Read LS ADC Ch 2
 		printf("Read LS ADC Ch 2\n") ;
 		chnIndex = 2 ;
@@ -491,7 +519,7 @@ void atLSADC(unsigned char *cmdArg)
 	}
 	else {
 		printf("Invalid command argument\n") ;
-		UARTPuts("\r\n",-1) ;
+		UART1Puts("\n",-1) ;
 		//return -1 ;
 	}
 
@@ -501,23 +529,42 @@ void atLSADC(unsigned char *cmdArg)
 	for(i=0;i<20;i++) {
 		Queue_put(i2cmsgQ,(Queue_Elem *)&i2cMsg) ;
 		Semaphore_post(semI2C1) ;
+		Task_sleep(2);
 		Semaphore_pend(semI2C2, BIOS_WAIT_FOREVER);
 		msg = Queue_get(i2cmsgQ) ;
 		Vtg = (msg->voltage_AD7995 & 0xff0f) ;
 		pVtg = (unsigned char *)(&Vtg) ;
 		v1 = (unsigned char)(*pVtg) ;
 		v2 = (unsigned char)(*(pVtg+1)) ;
-		voltage += (double)(v1*256+v2)/(1024*1.21) ;
+		voltage += (double)(v1*256+v2)/(1024*1.2) ;
 	}
 
 	sprintf(buffer,"%f",voltage/20) ;
-	UARTPuts("\r\n",-1) ;
-	UARTPuts(buffer,-1) ;
-	UARTPuts("\r\nOK\r\n",-1) ;
+	UART1Puts("\n",-1) ;
+	UART1Puts(buffer,-1) ;
+	UART1Puts("\nOK\n",-1) ;
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
+}
+
+// PA Channel Select
+void atPACHN(unsigned char *cmdArg)
+{
+
+}
+
+// Test Command
+void atT(unsigned char *cmdArg)
+{
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
+	printf("TEST COMMAND\n") ;
+	UART1Puts("\nOK\n",-1) ;
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
 
 void atRESET(void)
 {
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_HIGH);
 	printf("RESET COMMAND\n") ;
-	UARTPuts("\r\n",-1) ;
+	UART1Puts("\n",-1) ;
+	GPIOPinWrite(SOC_GPIO_0_REGS, 2, GPIO_PIN_LOW);
 }
