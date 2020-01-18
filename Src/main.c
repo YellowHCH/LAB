@@ -36,6 +36,9 @@ uint32_t uwPrescalerValue = 0;
 #define SECONDS_PER_DAY 4
 //#define SECONDS_PER_HOUR 60*60
 #define SECONDS_PER_HOUR 3
+#define COUNT_ONCE_PER_DAY 		24*60*60/2
+#define COUNT_TWICE_PER_DAY 	24*60*60/4
+#define COUNT_TWRICE_PER_DAY 	24*60*60/6
 //#define HOURS_PER_DAY 24
 #define SECONDS_PER_TIM 2
 #define SECONDS_PRE_TASK 1
