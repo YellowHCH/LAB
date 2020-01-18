@@ -134,6 +134,7 @@ void UART_RECV(uint16_t size);
 /* transfer int to str */
 void myItoa(int res, char *des);
 /*0. ATT */
+void ATRefresh(void);
 void ATTest(void);
 /*1.	Turn on/off DAC/ADC Clock*/
 void Turn_On_DAAD_Clk(void);
@@ -173,6 +174,19 @@ void SystemReset(void);
 /* Test Uart Communication Betwen STM32 and Dsp*/
 void TestUart(void);
 
+/*############ relay control ##################*/
+/* DSP_FPGA_MAIN_BOARD CONTROL
+	 pin : PE0
+*/
+void Set_DSP_Relay(void);
+void Reset_DSP_Relay(void);
+/* Tx_Rx_BOARD CONTROL
+	 pin : PE1 & PE2
+*/
+void Set_TxRx_Relay1(void);
+void Reset_TxRx_Relay1(void);
+void Set_TxRx_Relay2(void);
+void Reset_TxRx_Relay2(void);
 /*################## WDG PART #########################*/
 #ifndef __at
 #define __at(_addr) __attribute__ ((at(_addr)))

@@ -426,7 +426,14 @@ int main(void)
 
 		// run task		
 		/* 拉高继电器控制引脚电平，给控制板和发射板上电 */
-		
+		Set_DSP_Relay();
+		Set_TxRx_Relay1();
+		Set_TxRx_Relay2();
+		// 等待几秒钟，DSP上电初始化
+		for(int count = 0; count < 0; ++count){
+			FeedWDG();
+			HAL_Delay(1000);
+		}
 		/* 打开串口，进行指令传输 */
 //		if(HAL_UART_Init(&UartHandle) != HAL_OK)
 //		{
@@ -438,6 +445,10 @@ int main(void)
 		/* waiting for task end*/
 		// close task
 		/* 拉低继电器电平，主板发射板断电*/
+		Reset_DSP_Relay();
+		Reset_TxRx_Relay1();
+		Reset_TxRx_Relay2();
+		
 //		Task_End();
 		/* Refresh IWDG: reload counter 
 		*/
@@ -584,6 +595,7 @@ void Task_End(){
 	Reset_Pins();
 }
 
+/*####### GPIO_Pins ###############*/
 void Init_GPIO_Pins(){
 	/* -1- Enable each GPIO Clock (to be able to program the configuration registers) */
 	__HAL_RCC_GPIOE_CLK_ENABLE();
@@ -672,6 +684,29 @@ void Reset_Pins(){
 	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
 //	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_4, GPIO_PIN_RESET);
 //	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_RESET);
+}
+
+/* relay control*/
+void Set_DSP_Relay(void){
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0, GPIO_PIN_SET);
+}
+
+void Reset_DSP_Relay(void){
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0, GPIO_PIN_RESET);
+}
+
+void Set_TxRx_Relay1(void){
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_SET);
+}
+void Reset_TxRx_Relay1(void){
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_RESET);
+}
+
+void Set_TxRx_Relay2(void){
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_SET);
+}
+void Reset_TxRx_Relay2(void){
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_RESET);
 }
 
 void FlashingFast(void){
@@ -930,18 +965,67 @@ void myItoa(int res, char *des){
 
 /* Test Uart Communication Betwen STM32 and Dsp*/
 void TestUart(void){
-	Set_Pins();
+//	Set_Pins();
 	HAL_Delay(100);
-	ATTest();
+//	// test 0
+//	ATTest();
+//	HAL_Delay(50);
+//	// test 1
+//	Turn_On_DAAD_Clk();
+//	HAL_Delay(50);
+//	Turn_Off_DAAD_Clk();
+//	HAL_Delay(50);
+//	// test 2
+//	Turn_On_DA_Clk();
+//	HAL_Delay(50);
+//	Turn_Off_DA_Clk();
+//	HAL_Delay(50);
+//	// test 3
+//	ATRefresh();Turn_On_AD_Clk();ATRefresh();
+//	HAL_Delay(50);
+//	Turn_Off_AD_Clk();
+//	HAL_Delay(50);
+//	// test 4
+//	PingTest();
+//	HAL_Delay(50);
+//	ATRefresh();PingSaveDataToSD(1.23,3.21);ATRefresh();
+//	HAL_Delay(50);
+//	// test 5
+//	Turn_On_TGC();
+//	HAL_Delay(50);
+//	Turn_Off_TGC();
+//	HAL_Delay(50);
+// test 13
+	
+	ATRefresh();ReadLowSpeedADC(2);ATRefresh();
 	HAL_Delay(50);
-	Reset_Pins();
+//	Reset_Pins();
 }
 
 
 /* 0. AT Test*/
-void ATTest(void){
-//	uint8_t cmd[] = "ATT\r";
-	uint8_t cmd[] = "ATCODACLK=1\r";
+// 读空刷新DSP
+void ATRefresh(void){
+	FeedWDG();
+//	uint8_t cmd[] = "AT\r";
+//	// send cmd
+//	UART_SEND(cmd, (COUNTOF(cmd) - 1));
+	while(1){
+		
+		if(HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, 1, 5) != HAL_OK)
+		{
+			//Error_Handler();  
+//			UART_Recv_Error_Handler();
+			// 如果读取超时，说明读空了，则跳出while
+			break;
+		}
+	}
+	HAL_Delay(5);
+}
+
+	void ATTest(void){
+	uint8_t cmd[] = "ATT\r";
+//	uint8_t cmd[] = "ATCODACLK=1\r";
 	// send cmd
 	UART_SEND(cmd, (COUNTOF(cmd) - 1));
 
@@ -1490,10 +1574,18 @@ double ReadLowSpeedADC(uint16_t channel){
 
 	// wait for ADC , need to check how many bytes
 	memset(aRxBuffer, 0, 17);
-	UART_RECV(16); // size = "\r\n" + buffer[0:7] + "\r\nOK\r\n" + ">" = 17
+	UART_RECV(17); // size = "\r\n" + buffer[0:7] + "\r\nOK\r\n" + ">" = 17
 	char *ch = (char*)(aRxBuffer);
 	if(*ch != '\r' || *(ch+1) != '\n' || *(ch+10) != '\r' || *(ch+11) != '\n' || *(ch+12) != 'O' || *(ch+13) != 'K' || *(ch+14) != '\r' || *(ch+15) != '\n' || *(ch+16) != '>'){
+	#ifdef Debug
+		FlashingSlow();
+	#endif
 		UART_CheckOK_Error_Handler(); 
+	}
+	else{
+		#ifdef Debug
+		FlashingFast();
+		#endif
 	}
 	double power = 0.0;
 	char valStr[8] = "";
