@@ -1646,6 +1646,83 @@ void SystemReset(){
 	}
 }
 
+/* 15. Source Select
+ * ATSR=0: select primary channel
+ * ATSR=1: select sencdory channel
+ * */
+void SourceSelect(uint8_t choice){
+	uint8_t cmd[10] = "ATSR=0\r";
+        if( choice == 1){
+                cmd[5] = '1';
+        }
+//	strcat((char*)cmd, "\r\n");
+	// send cmd
+	UART_SEND(cmd, (COUNTOF(cmd) - 1));
+
+	// wait for OK
+	UartRecvLen = 0;
+	memset(aRxBuffer, 0, 7);
+	UART_RECV(7);
+	char *ch = (char*)aRxBuffer;
+	if(*(ch+0) != '\r' || *(ch+1) != '\n' || *(ch+2) != 'O' || *(ch+3) != 'K' || *(ch+4) != '\r' || *(ch+5) != '\n' || *(ch+6) != '>'){
+	#ifdef Debug
+		FlashingSlow();
+	#endif
+		UART_CheckOK_Error_Handler();
+	}
+	else{
+	#ifdef Debug
+		FlashingFast();
+	#endif
+	}
+}
+
+/* 16. PA channle select
+ * choice:
+ * 0: turn off both channel
+ * 1: turn channel 1
+ * 2: turn channel 2
+ * 3: turn both PA channel
+ *
+ * */
+void PAChannleSelect(uint8_t choice){
+	uint8_t cmd[] = "ATPACSEL=0\r";
+        switch(choice){
+        case 0:
+                break;
+        case 1:
+                cmd[9] = '1';
+                break;
+        case 2:
+                cmd[9] = '2';
+                break;
+        case 3:
+                cmd[9] = '3';
+                break;
+        default: return;
+        }
+//	strcat((char*)cmd, "\r\n");
+	// send cmd
+	UART_SEND(cmd, (COUNTOF(cmd) - 1));
+
+	// wait for OK
+	UartRecvLen = 0;
+	memset(aRxBuffer, 0, 7);
+	UART_RECV(7);
+	char *ch = (char*)aRxBuffer;
+	if(*(ch+0) != '\r' || *(ch+1) != '\n' || *(ch+2) != 'O' || *(ch+3) != 'K' || *(ch+4) != '\r' || *(ch+5) != '\n' || *(ch+6) != '>'){
+	#ifdef Debug
+		FlashingSlow();
+	#endif
+		UART_CheckOK_Error_Handler();
+	}
+	else{
+	#ifdef Debug
+		FlashingFast();
+	#endif
+	}
+}
+
 /**
   * @brief  Tx Transfer completed callback
   * @param  UartHandle: UART handle. 
