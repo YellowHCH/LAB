@@ -438,10 +438,10 @@ int main(void)
 			HAL_Delay(1000);
 		}
 		/* 打开串口，进行指令传输 */
-//		if(HAL_UART_Init(&UartHandle) != HAL_OK)
-//		{
-//			UART_Error_Handler();
-//		}
+		if(HAL_UART_Init(&UartHandle) != HAL_OK)
+		{
+			UART_Error_Handler();
+		}
 		HAL_Delay(50);// 等串口初始化完成
 //		Task_Run();
 		TestUart();
@@ -560,7 +560,7 @@ void Task_Run(){
 	 /* Feed WDG , 10 seconds once*/
 		FeedWDG();
 	/* 12. Generate LFM2 Pulse */
-	 GenLFM2Pulse(400, 401, 402, 1.1, 14);HAL_Delay(10);
+	 GenLFM2Pulse(400, 1, 2, 1.1, 14);HAL_Delay(10);
 	 /* Feed WDG , 10 seconds once*/
 		FeedWDG();
 	/* 13. System Reset */
@@ -971,38 +971,61 @@ void TestUart(void){
 //	Set_Pins();
 	HAL_Delay(100);
 //	// test 0
-//	ATTest();
-//	HAL_Delay(50);
+  	ATTest();
+  	HAL_Delay(500);
 //	// test 1
 //	Turn_On_DAAD_Clk();
-//	HAL_Delay(50);
+//	HAL_Delay(500);
 //	Turn_Off_DAAD_Clk();
-//	HAL_Delay(50);
+//	HAL_Delay(500);
 //	// test 2
 //	Turn_On_DA_Clk();
-//	HAL_Delay(50);
+//	HAL_Delay(500);
 //	Turn_Off_DA_Clk();
-//	HAL_Delay(50);
+//	HAL_Delay(500);
 //	// test 3
 //	ATRefresh();Turn_On_AD_Clk();ATRefresh();
-//	HAL_Delay(50);
+//	HAL_Delay(500);
 //	Turn_Off_AD_Clk();
-//	HAL_Delay(50);
+//	HAL_Delay(500);
 //	// test 4
 //	PingTest();
-//	HAL_Delay(50);
+//	HAL_Delay(500);
 //	ATRefresh();PingSaveDataToSD(1.23,3.21);ATRefresh();
-//	HAL_Delay(50);
+//	HAL_Delay(500);
 //	// test 5
 //	Turn_On_TGC();
-//	HAL_Delay(50);
+//	HAL_Delay(500);
 //	Turn_Off_TGC();
-//	HAL_Delay(50);
+//	HAL_Delay(500);
+//	// test 6
+//	SetPulseInterval(100);
+//	HAL_Delay(500);
+//	// test 7
+//	SetInitGain(0.8);
+//	HAL_Delay(500);
+//	// test 8
+//	SetEndGain(2.1);
+//	HAL_Delay(500);
+//	// test 9 not ok
+//	ListFilesInSDCard();
+//	HAL_Delay(500);
+//	// test 10
+//	GenCWPulse(200, 1, 1.0);
+//	HAL_Delay(500);
+//	// test 11
+	GenLFMPulse(120, 150, 0.9, 1);
+	HAL_Delay(500);
+	// test 12
+	GenLFM2Pulse(400, 1, 2, 1.1, 1);
+	HAL_Delay(500);
 // test 13
 	
-	ATRefresh();ReadLowSpeedADC(2);ATRefresh();
-	HAL_Delay(50);
+//	ATRefresh();ReadLowSpeedADC(2);ATRefresh();
+//	HAL_Delay(50);
 //	Reset_Pins();
+// test 14
+//	SystemReset();
 }
 
 
@@ -1041,6 +1064,7 @@ void ATRefresh(void){
 		UART_CheckOK_Error_Handler(); 
 	#ifdef Debug
 		FlashingSlow();
+	FlashingFast();
 	#endif
 	}
 	else{
@@ -1397,7 +1421,7 @@ void SetEndGain(double volts){
 	UART_SEND(cmd, strlen((char*)cmd));
 
 	// wait for OK
-	UART_RECV(6);
+	///UART_RECV(6);
 	UartRecvLen = 0;
 	memset(aRxBuffer, 0, 7);
 	UART_RECV(7);
@@ -1417,7 +1441,7 @@ void SetEndGain(double volts){
 /* 9.	List files in SD Card */
 void ListFilesInSDCard(){
 	uint8_t cmd[] = "ATSDLS\r";
-
+	//strcat((char*)cmd, ENDFLAG);
 	// send cmd
 	UART_SEND(cmd, (COUNTOF(cmd) - 1));
 
@@ -1478,23 +1502,23 @@ void GenCWPulse(uint16_t fre, uint16_t cycle, double gain){
 /* 11. Generate LFM Pulse */
 void GenLFMPulse(uint16_t f0, uint16_t f1, double gain, uint16_t Tsing){
 	char f0Tmp[10] = "";
-	uint8_t TsingTmp[10] = "";
+	char TsingTmp[10] = "";
 	char f1Tmp[10] = "";
 	char gainTmp[10] = "";
 	//uint8_t TsingTmp[10] = "";
 	sprintf(f0Tmp, "%hu", f0);
 	sprintf(f1Tmp, "%hu", f1);
 	sprintf(gainTmp, "%f", gain);
-	sprintf((char*)TsingTmp, "%hu", Tsing);
+	sprintf(TsingTmp, "%hu", Tsing);
 	
-	uint8_t cmd[40] = "ATGLFM=";
+	uint8_t cmd[80] = "ATGLFM=";
 	strcat((char*)cmd, f0Tmp);
 	strcat((char*)cmd, ",");
 	strcat((char*)cmd, f1Tmp);
 	strcat((char*)cmd, ",");
 	strcat((char*)cmd, gainTmp);
 	strcat((char*)cmd, ",");
-	strcat((char*)cmd, (char*)TsingTmp);
+	strcat((char*)cmd, TsingTmp);
 	strcat((char*)cmd, ENDFLAG);
 	// send cmd
 //	UART_SEND(cmd, (COUNTOF(cmd) - 1));
@@ -1530,7 +1554,7 @@ void GenLFM2Pulse(uint16_t fc, uint16_t f0, uint16_t f1, double gain, uint16_t T
 	sprintf(gainTmp, "%f", gain);
 	sprintf(TsingTmp, "%hu", Tsing);
 	
-	uint8_t cmd[40] = "ATGLFM=";
+	uint8_t cmd[40] = "ATGLFM2=";
 	strcat((char*)cmd, fcTmp);
 	strcat((char*)cmd, ",");
 	strcat((char*)cmd, f0Tmp);
