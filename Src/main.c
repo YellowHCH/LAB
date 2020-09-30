@@ -43,6 +43,7 @@ uint32_t uwPrescalerValue = 0;
 #define SECONDS_PER_TIM 2
 #define SECONDS_PRE_TASK 1
 bool waiting_status = true;
+static bool IsFirstTask = false;
 static uint32_t waitOneHour = 0;
 static uint32_t waitOneHour2 = 0;
 /* Private function prototypes -----------------------------------------------*/
@@ -968,6 +969,11 @@ void myItoa(int res, char *des){
 
 /* Test Uart Communication Betwen STM32 and Dsp*/
 void TestUart(void){
+        if(!IsFirstTask){
+            IsFirstTask = true;
+            // do init job
+
+        }
 //	Set_Pins();
 	HAL_Delay(100);
 //	// test 0
