@@ -1653,13 +1653,13 @@ void SystemReset(){
 }
 
 /* 15. Source Select
- * ATSR=0: select primary channel
- * ATSR=1: select sencdory channel
+ * ATSRSEL=0: select primary channel
+ * ATSRSEL=1: select sencdory channel
  * */
 void SourceSelect(uint8_t choice){
-	uint8_t cmd[10] = "ATSR=0\r";
+	uint8_t cmd[20] = "ATSRSEL=0\r";
         if( choice == 1){
-                cmd[5] = '1';
+                cmd[8] = '1';
         }
 //	strcat((char*)cmd, "\r\n");
 	// send cmd
@@ -1900,4 +1900,4 @@ void assert_failed(uint8_t *file, uint32_t line)
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
 
 
-///************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+
