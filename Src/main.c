@@ -41,7 +41,9 @@ uint32_t uwPrescalerValue = 0;
 #define COUNT_TWRICE_PER_DAY 	24*60*60/6
 //#define HOURS_PER_DAY 24
 #define SECONDS_PER_TIM 2
-#define SECONDS_PRE_TASK 1
+#define SECONDS_PER_TAST 24*60*60
+// COUNTS_PRE_TASK = SECONDS_PER_TAST / SECONDS_PER_TIM
+#define COUNTS_PRE_TASK 4
 bool waiting_status = true;
 static bool IsFirstTask = false;
 static uint32_t waitOneHour = 0;
@@ -474,7 +476,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	++waitOneHour;
 	++waitOneHour2;
 	UpdateCurrentTime(&CurrentTimeInst);
-	if(waitOneHour >= SECONDS_PER_HOUR && waitOneHour >= SECONDS_PER_HOUR){
+	if(waitOneHour >= COUNTS_PRE_TASK && waitOneHour >= COUNTS_PRE_TASK){
 		waitOneHour = 0;
 		waitOneHour2 = 0;
 		waitOneHour = 0;
@@ -1020,11 +1022,11 @@ void TestUart(void){
 //	GenCWPulse(200, 1, 1.0);
 //	HAL_Delay(500);
 //	// test 11
-	GenLFMPulse(120, 150, 0.9, 1);
-	HAL_Delay(500);
-	// test 12
-	GenLFM2Pulse(400, 1, 2, 1.1, 1);
-	HAL_Delay(500);
+//	GenLFMPulse(120, 150, 0.9, 1);
+//	HAL_Delay(500);
+//	// test 12
+//	GenLFM2Pulse(400, 1, 2, 1.1, 1);
+//	HAL_Delay(500);
 // test 13
 	
 //	ATRefresh();ReadLowSpeedADC(2);ATRefresh();
@@ -1032,6 +1034,13 @@ void TestUart(void){
 //	Reset_Pins();
 // test 14
 //	SystemReset();
+// test 15
+	HAL_Delay(500);
+	SourceSelect(0);
+	HAL_Delay(500);
+	// test 16
+	PAChannleSelect(0);
+	HAL_Delay(500);
 }
 
 
@@ -1458,7 +1467,8 @@ void ListFilesInSDCard(){
 	char *ch = (char*)aRxBuffer;
 	if(*(ch+0) != '\r' || *(ch+1) != '\n' || *(ch+2) != 'O' || *(ch+3) != 'K' || *(ch+4) != '\r' || *(ch+5) != '\n' || *(ch+6) != '>'){
 	#ifdef Debug
-		FlashingSlow();
+		FlashingFast();
+		//FlashingSlow();
 	#endif
 		UART_CheckOK_Error_Handler();
 	}
@@ -1657,9 +1667,18 @@ void SystemReset(){
  * ATSRSEL=1: select sencdory channel
  * */
 void SourceSelect(uint8_t choice){
-	uint8_t cmd[20] = "ATSRSEL=0\r";
-        if( choice == 1){
+	uint8_t cmd[] = "ATSRSEL=0\r";
+	uint8_t cmt[20] = "ATSRSEL=0\r";
+	if( choice == 1){
+		cmd[8] = (uint8_t)('1');
+	}
+	switch(choice){
+        case 0:
+                break;
+        case 1:
                 cmd[8] = '1';
+                break;
+        default: return;
         }
 //	strcat((char*)cmd, "\r\n");
 	// send cmd
