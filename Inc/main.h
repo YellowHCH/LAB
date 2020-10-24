@@ -169,6 +169,20 @@ void GenLFM2Pulse(uint16_t fc, uint16_t f0, uint16_t f1, double gain, uint16_t T
 double ReadLowSpeedADC(uint16_t channel);
 /* 14. System Reset */
 void SystemReset(void);
+/* 15. Source Select
+ * ATSR=0: select primary channel
+ * ATSR=1: select sencdory channel
+ * */
+void SourceSelect(uint8_t choice);
+/* 16. PA channle select
+ * choice:
+ * 0: turn off both channel
+ * 1: turn channel 1
+ * 2: turn channel 2
+ * 3: turn both PA channel
+ *
+ * */
+void PAChannleSelect(uint8_t choice);
 
 
 /* Test Uart Communication Betwen STM32 and Dsp*/
@@ -187,6 +201,7 @@ void Set_TxRx_Relay1(void);
 void Reset_TxRx_Relay1(void);
 void Set_TxRx_Relay2(void);
 void Reset_TxRx_Relay2(void);
+void Delay_Sec(int sec);
 /*################## WDG PART #########################*/
 #ifndef __at
 #define __at(_addr) __attribute__ ((at(_addr)))

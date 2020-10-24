@@ -41,9 +41,9 @@ uint32_t uwPrescalerValue = 0;
 #define COUNT_TWRICE_PER_DAY 	24*60*60/6
 //#define HOURS_PER_DAY 24
 #define SECONDS_PER_TIM 2
-#define SECONDS_PER_TAST 24*60*60
-// COUNTS_PRE_TASK = SECONDS_PER_TAST / SECONDS_PER_TIM
-#define COUNTS_PRE_TASK 4
+#define SECONDS_PER_TASK 24*60*60
+// COUNTS_PRE_TASK = SECONDS_PER_TASK / SECONDS_PER_TIM
+#define COUNTS_PRE_TASK 150
 bool waiting_status = true;
 static bool IsFirstTask = false;
 static uint32_t waitOneHour = 0;
@@ -99,7 +99,7 @@ char ENDFLAG[] = "\r";
 uint16_t Date __at(0x10000000);
 uint16_t State __at(0x10000008);
 /* 20 seconds feed dog */
-#define WDGTIME   20
+#define WDGTIME   30
 
 /* IWDG and TIM handlers declaration */
 static IWDG_HandleTypeDef   IwdgHandle;
@@ -433,13 +433,14 @@ int main(void)
 		// run task		
 		/* 拉高继电器控制引脚电平，给控制板和发射板上电 */
 		Set_DSP_Relay();
-		Set_TxRx_Relay1();
-		Set_TxRx_Relay2();
+		//Set_TxRx_Relay1();
+		//Set_TxRx_Relay2();
 		// 等待几秒钟，DSP上电初始化
-		for(int count = 0; count < 0; ++count){
-			FeedWDG();
-			HAL_Delay(1000);
-		}
+//		for(int count = 0; count < 5; ++count){
+//			FeedWDG();
+//			HAL_Delay(1000);
+//		}
+		Delay_Sec(5);
 		/* 打开串口，进行指令传输 */
 		if(HAL_UART_Init(&UartHandle) != HAL_OK)
 		{
@@ -451,9 +452,10 @@ int main(void)
 		/* waiting for task end*/
 		// close task
 		/* 拉低继电器电平，主板发射板断电*/
+		Delay_Sec(5);// temp task, delay 5 seconds
 		Reset_DSP_Relay();
-		Reset_TxRx_Relay1();
-		Reset_TxRx_Relay2();
+		//Reset_TxRx_Relay1();
+		//Reset_TxRx_Relay2();
 		
 //		Task_End();
 		/* Refresh IWDG: reload counter 
@@ -487,6 +489,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	}
 	
 //	FeedWDG();
+}
+
+void Delay_Sec(int sec){
+	// limit to 100 seconds
+	if(sec > 999){sec = 100;}
+	for(int count = 0; count < sec; ++count){
+			FeedWDG();
+			HAL_Delay(1000);
+		}
 }
 
 /**/
@@ -607,7 +618,8 @@ void Init_GPIO_Pins(){
 	__HAL_RCC_GPIOE_CLK_ENABLE();
 	
 	/* -2- Configure IOs in output push-pull mode to drive PE0 */
-  GPIO_InitStruct0.Mode  = GPIO_MODE_OUTPUT_PP;
+//  GPIO_InitStruct0.Mode  = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct0.Mode  = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct0.Pull  = GPIO_PULLUP;
   GPIO_InitStruct0.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 
@@ -617,7 +629,8 @@ void Init_GPIO_Pins(){
 	
 	/*-2- Configure IOs in output push-pull mode to drive PE1*/
 	__HAL_RCC_GPIOE_CLK_ENABLE();
-	GPIO_InitStruct1.Mode  = GPIO_MODE_OUTPUT_PP;
+//	GPIO_InitStruct1.Mode  = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct1.Mode  = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct1.Pull  = GPIO_PULLUP;
   GPIO_InitStruct1.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 
@@ -625,9 +638,10 @@ void Init_GPIO_Pins(){
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct1);//GPIOE
 //	__HAL_RCC_GPIOA_CLK_DISABLE();
 	
-	/*-2- Configure IOs in output push-pull mode to drive PE2*/
+	/*-3- Configure IOs in output push-pull mode to drive PE2*/
 	__HAL_RCC_GPIOE_CLK_ENABLE();
-	GPIO_InitStruct2.Mode  = GPIO_MODE_OUTPUT_PP;
+//	GPIO_InitStruct2.Mode  = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct2.Mode  = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct2.Pull  = GPIO_PULLUP;
   GPIO_InitStruct2.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 
@@ -635,9 +649,10 @@ void Init_GPIO_Pins(){
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct2);//GPIOE
 //	__HAL_RCC_GPIOB_CLK_DISABLE();
 	
-	/*-2- Configure IOs in output push-pull mode to drive PE3*/
+	/*-4- Configure IOs in output push-pull mode to drive PE3*/
 	__HAL_RCC_GPIOE_CLK_ENABLE();
-	GPIO_InitStruct3.Mode  = GPIO_MODE_OUTPUT_PP;
+//	GPIO_InitStruct3.Mode  = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct3.Mode  = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct3.Pull  = GPIO_PULLUP;
   GPIO_InitStruct3.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 
@@ -647,7 +662,8 @@ void Init_GPIO_Pins(){
 
 	/*-2- Configure IOs in output push-pull mode to drive PE3*/
 	__HAL_RCC_GPIOE_CLK_ENABLE();
-	GPIO_InitStruct4.Mode  = GPIO_MODE_OUTPUT_PP;
+//	GPIO_InitStruct4.Mode  = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct4.Mode  = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct4.Pull  = GPIO_PULLUP;
   GPIO_InitStruct4.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 
@@ -656,7 +672,8 @@ void Init_GPIO_Pins(){
 	
 	/*-2- Configure IOs in output push-pull mode to drive PE3*/
 	__HAL_RCC_GPIOE_CLK_ENABLE();
-	GPIO_InitStruct5.Mode  = GPIO_MODE_OUTPUT_PP;
+//	GPIO_InitStruct5.Mode  = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct5.Mode  = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct5.Pull  = GPIO_PULLUP;
   GPIO_InitStruct5.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 
@@ -695,10 +712,12 @@ void Reset_Pins(){
 /* relay control*/
 void Set_DSP_Relay(void){
 	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET);
 }
 
 void Reset_DSP_Relay(void){
 	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
 }
 
 void Set_TxRx_Relay1(void){
@@ -930,7 +949,7 @@ void UART_SEND(uint8_t *tx, uint16_t size){
 }
 void UART_RECV(uint16_t size){
 	
-	if(HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, size, 100) != HAL_OK)
+	if(HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, size, 500) != HAL_OK)
   {
     //Error_Handler();  
 		UART_Recv_Error_Handler();
@@ -981,6 +1000,7 @@ void TestUart(void){
 //	// test 0
   	ATTest();
   	HAL_Delay(500);
+		ATRefresh();
 //	// test 1
 //	Turn_On_DAAD_Clk();
 //	HAL_Delay(500);
@@ -996,11 +1016,13 @@ void TestUart(void){
 //	HAL_Delay(500);
 //	Turn_Off_AD_Clk();
 //	HAL_Delay(500);
-//	// test 4
-//	PingTest();
-//	HAL_Delay(500);
-//	ATRefresh();PingSaveDataToSD(1.23,3.21);ATRefresh();
-//	HAL_Delay(500);
+	// test 4
+	PingTest();
+	HAL_Delay(500);
+	ATRefresh();
+	PingSaveDataToSD(1.23,3.21);
+	ATRefresh();
+	HAL_Delay(500);
 //	// test 5
 //	Turn_On_TGC();
 //	HAL_Delay(500);
@@ -1034,13 +1056,14 @@ void TestUart(void){
 //	Reset_Pins();
 // test 14
 //	SystemReset();
-// test 15
-	HAL_Delay(500);
-	SourceSelect(0);
-	HAL_Delay(500);
-	// test 16
-	PAChannleSelect(0);
-	HAL_Delay(500);
+//// test 15
+//	HAL_Delay(500);
+//	SourceSelect(0);
+//	HAL_Delay(500);
+//	// test 16
+//	ATRefresh();
+//	PAChannleSelect(0);
+//	HAL_Delay(500);
 }
 
 
@@ -1064,8 +1087,9 @@ void ATRefresh(void){
 	HAL_Delay(5);
 }
 
-	void ATTest(void){
+void ATTest(void){
 	uint8_t cmd[] = "ATT\r";
+//	uint8_t cmd[] = "ATPING\r";
 //	uint8_t cmd[] = "ATCODACLK=1\r";
 	// send cmd
 	UART_SEND(cmd, (COUNTOF(cmd) - 1));
@@ -1240,14 +1264,16 @@ void PingTest(){
 	uint8_t cmd[] = "ATPING\r";
 
 	// send cmd
-//	UART_SEND(cmd, (COUNTOF(cmd) - 1));
-	UART_SEND(cmd, strlen((char*)cmd));
+	UART_SEND(cmd, (COUNTOF(cmd) - 1));
+//	UART_SEND(cmd, strlen((char*)cmd));
 
 	// wait for OK
 	UartRecvLen = 0;
 	memset(aRxBuffer, 0, 7);
-	UART_RECV(7);
+	//UART_RECV(7);
+	HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, 7, 1000);
 	char *ch = (char*)aRxBuffer;
+	
 	if(*(ch+0) != '\r' || *(ch+1) != '\n' || *(ch+2) != 'O' || *(ch+3) != 'K' || *(ch+4) != '\r' || *(ch+5) != '\n' || *(ch+6) != '>'){
 	#ifdef Debug
 		FlashingSlow();
@@ -1260,6 +1286,9 @@ void PingTest(){
 	#endif
 	}
 }
+/*
+* need more than 20s, fuck
+*/
 void PingSaveDataToSD(double ChannelOneVolt, double ChannelTwoVolt){
 	/* name == "d0000001"*/
 	uint8_t cmd[80] = "ATPING=\"d0000001.bin\"";
@@ -1298,10 +1327,13 @@ void PingSaveDataToSD(double ChannelOneVolt, double ChannelTwoVolt){
 //	UART_SEND(cmd, (COUNTOF(cmd) - 1));
 	UART_SEND(cmd, strlen((char*)cmd));
 
+// SD writing speed is slow, need to wait 22 seconds
+	Delay_Sec(23);
 	// wait for OK
 	UartRecvLen = 0;
-	memset(aRxBuffer, 0, 7);
-	UART_RECV(7);
+	memset(aRxBuffer, 0, RXBUFFERSIZE);
+	//UART_RECV(7);
+	HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, 7, 24*1000);
 	char *ch = (char*)aRxBuffer;
 	if(*(ch+0) != '\r' || *(ch+1) != '\n' || *(ch+2) != 'O' || *(ch+3) != 'K' || *(ch+4) != '\r' || *(ch+5) != '\n' || *(ch+6) != '>'){
 	#ifdef Debug
@@ -1669,9 +1701,9 @@ void SystemReset(){
 void SourceSelect(uint8_t choice){
 	uint8_t cmd[] = "ATSRSEL=0\r";
 	uint8_t cmt[20] = "ATSRSEL=0\r";
-	if( choice == 1){
-		cmd[8] = (uint8_t)('1');
-	}
+//	if( choice == 1){
+//		cmd[8] = (uint8_t)('1');
+//	}
 	switch(choice){
         case 0:
                 break;
