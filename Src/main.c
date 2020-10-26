@@ -51,6 +51,11 @@ bool waiting_status = true;
 static bool IsFirstTask = false;
 static uint32_t waitOneHour = 0;
 static uint32_t waitOneHour2 = 0;
+///************************///
+#define TASK_DAY_MAX	300
+double PowerRecord_1[TASK_DAY_MAX] __at(0x10000020);
+double PowerRecord_2[TASK_DAY_MAX] __at(0x10002420);
+///************************///
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 //static void Error_Handler(void);
@@ -253,6 +258,9 @@ int main(void)
 		State = 0xABCD;
 		Date = 0;
 		InitCurrentTime(&CurrentTimeInst);
+		// init PowerRecord
+		memset(PowerRecord_1, 0, sizeof(PowerRecord_1) / sizeof(double));
+		memset(PowerRecord_2, 0, sizeof(PowerRecord_2) / sizeof(double));
 	}
   /* STM32L4xx HAL library initialization:
        - Configure the Flash prefetch
@@ -1702,6 +1710,16 @@ double ReadLowSpeedADC(uint16_t channel){
                 ;
         }
         #endif
+	// record to noninit ram
+				switch(channel){
+					case 2:
+						PowerRecord_1[Date % TASK_DAY_MAX] = power;
+						break;
+					case 3:
+						PowerRecord_2[Date % TASK_DAY_MAX] = power;
+						break;
+					default: break;
+				}
 	return power;
 }
 
@@ -1814,6 +1832,43 @@ void PAChannleSelect(uint8_t choice){
 		FlashingFast();
 	#endif
 	}
+}
+/* ########## */
+void PrintPowerData(){
+	//sprintf(gainTmp, "%f", gain);
+	uint8_t str[100] = "channel-2\n";
+	UART_SEND(str, (COUNTOF(str) - 1));
+	memset(str, 0, sizeof(str) / sizeof(uint8_t));
+	double power = 0;
+	char s_power[10] = {0};
+	FlashingFast();
+	for(int idx = 0; idx < TASK_DAY_MAX; ++idx){
+		power = PowerRecord_1[idx];
+		sprintf(s_power, "%f", power);
+		sprintf((char*)str, "%d: ", idx);
+		strcat((char*)str, s_power);
+		strcat((char*)str, "\n");
+		UART_SEND(str, (COUNTOF(str) - 1));
+		memset(str, 0, sizeof(str) / sizeof(uint8_t));
+		FeedWDG();
+	}
+	
+	sprintf((char*)str, "\nchannel-3\n");
+	UART_SEND(str, (COUNTOF(str) - 1));
+	memset(str, 0, sizeof(str) / sizeof(uint8_t));
+	memset(s_power, 0, sizeof(s_power));
+	FlashingFast();
+	for(int idx = 0; idx < TASK_DAY_MAX; ++idx){
+		power = PowerRecord_2[idx];
+		sprintf(s_power, "%f", power);
+		sprintf((char*)str, "%d: ", idx);
+		strcat((char*)str, s_power);
+		strcat((char*)str, "\n");
+		UART_SEND(str, (COUNTOF(str) - 1));
+		memset(str, 0, sizeof(str) / sizeof(uint8_t));
+		FeedWDG();
+	}
+	
 }
 
 /**

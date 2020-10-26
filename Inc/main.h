@@ -184,6 +184,8 @@ void SourceSelect(uint8_t choice);
  * */
 void PAChannleSelect(uint8_t choice);
 
+/* For Special Condition*/
+void PrintPowerData();
 
 /* Test Uart Communication Betwen STM32 and Dsp*/
 void TestUart(void);
