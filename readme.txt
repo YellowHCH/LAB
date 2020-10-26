@@ -50,7 +50,7 @@ b)	ATADCLK=0 		Turn OFF
 
 4.	Signal PIN
 a)	ATPING					PING only
-b)	ATPING=’d0000001.bin’ 		PING and save RX data to SD using name ‘d0000001.bin’. File name comply with FAT 8.3 format
+b)	ATPING=b0000001.bin’ 		PING and save RX data to SD using name b0000001.bin’. File name comply with FAT 8.3 format
 
 5.	Turn on/off Time Gain Control (TGC)
 a)	ATTGC=1			Turn on TGC
