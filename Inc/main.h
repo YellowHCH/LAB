@@ -147,7 +147,7 @@ void Turn_On_AD_Clk(void);
 void Turn_Off_AD_Clk(void);
 /* 4.	Signal PIN */
 void PingTest(void);
-void PingSaveDataToSD(double ChannelOneVolt, double ChannelTwoVolt);
+void PingSaveDataToSD(double ChannelOneVolt, double ChannelTwoVolt, uint8_t choice);
 /* 5.	Turn on/off Time Gain Control (TGC) */
 void Turn_On_TGC(void);
 void Turn_Off_TGC(void);

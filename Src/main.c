@@ -539,7 +539,7 @@ void Task_Run(){
 	/* Feed WDG , 10 seconds once*/
 		FeedWDG();
 	char chtmp[] = "hchchchc";
-	PingSaveDataToSD(1.23456, 6.54321);HAL_Delay(10);
+	PingSaveDataToSD(1.23456, 6.54321, 1);HAL_Delay(10);
 	/* Feed WDG , 10 seconds once*/
 		FeedWDG();
 	/* 5.	Turn on/off Time Gain Control (TGC) */
@@ -1020,7 +1020,7 @@ void TestUart(void){
 	PingTest();
 	HAL_Delay(500);
 	ATRefresh();
-	PingSaveDataToSD(1.23,3.21);
+	PingSaveDataToSD(1.23,3.21, 1);
 	ATRefresh();
 	HAL_Delay(500);
 //	// test 5
@@ -1288,10 +1288,27 @@ void PingTest(){
 }
 /*
 * need more than 20s, fuck
+* choice:
+* 1-> CW
+* 2-> LFM
+* 3-> PALFM
+* others-> CW
 */
-void PingSaveDataToSD(double ChannelOneVolt, double ChannelTwoVolt){
+void PingSaveDataToSD(double ChannelOneVolt, double ChannelTwoVolt, uint8_t choice){
 	/* name == "d0000001"*/
 	uint8_t cmd[80] = "ATPING=\"d0000001.bin\"";
+        switch(choice){
+        case 1:
+                cmd[8] = 'C';
+                break;
+        case 2:
+                cmd[8] = 'L';
+                break;
+        case 3:
+                cmd[8] = 'P';
+                break;
+        default: break;
+        }
 	char tmp[10] = "";
 	sprintf(tmp, "%07hu", Date);
 	++Date;
