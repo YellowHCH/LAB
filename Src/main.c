@@ -1345,12 +1345,16 @@ void PingSaveDataToSD(double ChannelOneVolt, double ChannelTwoVolt, uint8_t choi
 	UART_SEND(cmd, strlen((char*)cmd));
 
 // SD writing speed is slow, need to wait 22 seconds
-	Delay_Sec(23);
+/*
+        it's hard to decide how long to wait, wait for 23s may not sutiable
+*/
+	//Delay_Sec(23);
 	// wait for OK
 	UartRecvLen = 0;
 	memset(aRxBuffer, 0, RXBUFFERSIZE);
 	//UART_RECV(7);
-	HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, 7, 24*1000);
+        // busy wait 30s
+	HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, 7, 30*1000);
 	char *ch = (char*)aRxBuffer;
 	if(*(ch+0) != '\r' || *(ch+1) != '\n' || *(ch+2) != 'O' || *(ch+3) != 'K' || *(ch+4) != '\r' || *(ch+5) != '\n' || *(ch+6) != '>'){
 	#ifdef Debug
