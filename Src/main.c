@@ -44,6 +44,9 @@ uint32_t uwPrescalerValue = 0;
 #define SECONDS_PER_TASK 24*60*60
 // COUNTS_PRE_TASK = SECONDS_PER_TASK / SECONDS_PER_TIM
 #define COUNTS_PRE_TASK 150
+#define COUNTS_PRE_TASK_TWO_DAY 24*60*60
+#define COUNTS_PRE_TASK_WEEK    7*24*60*60/2
+static uint32_t Count_per_task = COUNTS_PRE_TASK;
 bool waiting_status = true;
 static bool IsFirstTask = false;
 static uint32_t waitOneHour = 0;
@@ -478,7 +481,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	++waitOneHour;
 	++waitOneHour2;
 	UpdateCurrentTime(&CurrentTimeInst);
-	if(waitOneHour >= COUNTS_PRE_TASK && waitOneHour >= COUNTS_PRE_TASK){
+	if(waitOneHour >= Count_per_task && waitOneHour >= Count_per_task){
 		waitOneHour = 0;
 		waitOneHour2 = 0;
 		waitOneHour = 0;
@@ -1687,6 +1690,18 @@ double ReadLowSpeedADC(uint16_t channel){
 	char valStr[8] = "";
 	strncpy(valStr, ch+2, 8);
 	power = atof(valStr);
+        // startge for power manage
+        #if 0
+        if(power < 0.5){
+                Count_per_task = COUNTS_PRE_TASK_WEEK;
+        }
+        else if(power < 1){
+                Count_per_task = COUNTS_PRE_TASK_TWO_DAY;
+        }
+        else{
+                ;
+        }
+        #endif
 	return power;
 }
 
