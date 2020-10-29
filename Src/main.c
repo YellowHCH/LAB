@@ -43,7 +43,7 @@ uint32_t uwPrescalerValue = 0;
 #define SECONDS_PER_TIM 2
 #define SECONDS_PER_TASK 24*60*60
 // COUNTS_PRE_TASK = SECONDS_PER_TASK / SECONDS_PER_TIM
-#define COUNTS_PRE_TASK 150
+#define COUNTS_PRE_TASK 60
 #define COUNTS_PRE_TASK_TWO_DAY 24*60*60
 #define COUNTS_PRE_TASK_WEEK    7*24*60*60/2
 static uint32_t Count_per_task = COUNTS_PRE_TASK;
@@ -286,7 +286,7 @@ int main(void)
 	Reset_Pins();// close pins
 	
 	/* -2- Configure External line 13 (connected to PC.13 pin) in interrupt mode */
-  EXTI15_10_IRQHandler_Config();
+//  EXTI15_10_IRQHandler_Config();
 
 /*######################  Configure the UART peripheral  ########################*/
 /* Put the USART peripheral in the Asynchronous mode (UART Mode) */
@@ -930,6 +930,33 @@ void UART_Callback_Error_Handler(void){
 		BSP_LED_Toggle(LED2);
 	}
 }
+/**
+  * @brief  Tx Transfer completed callback
+  * @param  UartHandle: UART handle. 
+  * @note   This example shows a simple way to report end of IT Tx transfer, and 
+  *         you can add your own implementation. 
+  * @retval None
+  */
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
+{
+  /* Set transmission flag: transfer complete */
+  UartReady = SET;
+
+}
+
+/**
+  * @brief  Rx Transfer completed callback
+  * @param  UartHandle: UART handle
+  * @note   This example shows a simple way to report end of DMA Rx transfer, and 
+  *         you can add your own implementation.
+  * @retval None
+  */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
+{
+  /* Set transmission flag: transfer complete */
+  UartReady = SET;
+
+}
 
 void UART_SEND(uint8_t *tx, uint16_t size){
 	strncpy((char*)aTxBuffer, (char*)tx, size);
@@ -959,13 +986,23 @@ void UART_SEND(uint8_t *tx, uint16_t size){
 //  }
 }
 void UART_RECV(uint16_t size){
-	
+	if(HAL_UART_Receive_IT(&UartHandle, (uint8_t *)aRxBuffer, size) != HAL_OK)
+  {
+    UART_Recv_Error_Handler();
+  }
+	while (UartReady != SET)
+  {
+  }
+
+  /* Reset transmission flag */
+  UartReady = RESET;
+	#if 0
 	if(HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, size, 500) != HAL_OK)
   {
     //Error_Handler();  
 		UART_Recv_Error_Handler();
   }
-	
+	#endif
 //	/* 约定每次以'\n'作为结束*/
 //	uint8_t *recv = aRxBuffer;
 //	*recv = '\0';
@@ -1871,33 +1908,7 @@ void PrintPowerData(){
 	
 }
 
-/**
-  * @brief  Tx Transfer completed callback
-  * @param  UartHandle: UART handle. 
-  * @note   This example shows a simple way to report end of IT Tx transfer, and 
-  *         you can add your own implementation. 
-  * @retval None
-  */
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
-{
-  /* Set transmission flag: transfer complete */
-  UartReady = SET;
 
-}
-
-/**
-  * @brief  Rx Transfer completed callback
-  * @param  UartHandle: UART handle
-  * @note   This example shows a simple way to report end of DMA Rx transfer, and 
-  *         you can add your own implementation.
-  * @retval None
-  */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
-{
-  /* Set transmission flag: transfer complete */
-  UartRecvReady = SET;
-
-}
 
 /**
   * @brief  UART error callbacks
