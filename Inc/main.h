@@ -131,6 +131,7 @@ extern void Error_Handler(void);//msp里面用到了
 static uint16_t Buffercmp(uint8_t* pBuffer1, uint8_t* pBuffer2, uint16_t BufferLength);
 void UART_SEND(uint8_t *tx, uint16_t size);
 void UART_RECV(uint16_t size);
+void UART_RECV_IT(uint16_t size);
 /* transfer int to str */
 void myItoa(int res, char *des);
 /*0. ATT */

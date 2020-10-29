@@ -417,8 +417,35 @@ int main(void)
     /* Initialization Error */
     Error_Handler();
   }
-
-
+/****************************** Standby Mode *******************************************************/
+// stay in standby mode for 24 hour
+while (COUNT_ONCE_PER_DAY > waitOneHour){
+        if(HAL_UART_Receive_IT(&UartHandle, (uint8_t *)aRxBuffer, 7) != HAL_OK)
+  {
+    UART_Recv_Error_Handler();
+  }
+	while (UartReady != SET)
+  {
+        FeedWDG();
+  }
+        // deal with ATRCMD
+        char *cmd = (char*)aRxBuffer;
+        // ATRLOGD, print log data to uart port
+        if(*(cmd+0) == 'A' && *(cmd+1) == 'T' && *(cmd+2) == 'R' && *(cmd+3) == 'L' && *(cmd+4) == 'O' && *(cmd+5) == 'G' && *(cmd+6) == 'D'  )
+}{
+                PrintPowerData();
+}
+        // ATRCONSW, swith to normal mode
+        else if(*(cmd+0) == 'A' && *(cmd+1) == 'T' && *(cmd+2) == 'R' && *(cmd+3) == 'C' && *(cmd+4) == 'O' && *(cmd+5) == 'N' && *(cmd+6) == 'S'){
+                break;
+}
+/****************************** Normal Mode ********************************************************/
+// Into normal mode, send atcmd to DSP
+// flash twice to indicate into normal mode
+#ifdef Debug
+	FlashingFast();
+	FlashingFast();
+#endif
   while (1)
   {
 		
@@ -986,7 +1013,8 @@ void UART_SEND(uint8_t *tx, uint16_t size){
 //  }
 }
 void UART_RECV(uint16_t size){
-	if(HAL_UART_Receive_IT(&UartHandle, (uint8_t *)aRxBuffer, size) != HAL_OK)
+	#if 0
+        if(HAL_UART_Receive_IT(&UartHandle, (uint8_t *)aRxBuffer, size) != HAL_OK)
   {
     UART_Recv_Error_Handler();
   }
@@ -996,6 +1024,46 @@ void UART_RECV(uint16_t size){
 
   /* Reset transmission flag */
   UartReady = RESET;
+        #endif
+	#if 1
+	if(HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, size, 500) != HAL_OK)
+  {
+    //Error_Handler();  
+		UART_Recv_Error_Handler();
+  }
+	#endif
+//	/* 约定每次以'\n'作为结束*/
+//	uint8_t *recv = aRxBuffer;
+//	*recv = '\0';
+//	/* set UartRecvLen = 0 before this function */
+//	while(*recv != '\n'){
+//		if(HAL_UART_Receive_IT(&UartHandle, (uint8_t *)recv, 1) != HAL_OK)
+//		{
+//			//Error_Handler();  
+//			UART_Recv_Error_Handler();
+//		}
+//		while(UartRecvReady != SET){}
+//		/* Reset transmission flag */
+//		UartRecvReady = RESET;
+//		++recv;
+//		++UartRecvLen;
+//	}
+}
+
+void UART_RECV_IT(uint16_t size){
+	#if 1
+        if(HAL_UART_Receive_IT(&UartHandle, (uint8_t *)aRxBuffer, size) != HAL_OK)
+  {
+    UART_Recv_Error_Handler();
+  }
+	while (UartReady != SET)
+  {
+        FeedWDG();
+  }
+
+  /* Reset transmission flag */
+  UartReady = RESET;
+        #endif
 	#if 0
 	if(HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, size, 500) != HAL_OK)
   {
