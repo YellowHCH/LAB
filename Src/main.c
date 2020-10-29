@@ -421,23 +421,24 @@ int main(void)
 // stay in standby mode for 24 hour
 while (COUNT_ONCE_PER_DAY > waitOneHour){
         if(HAL_UART_Receive_IT(&UartHandle, (uint8_t *)aRxBuffer, 7) != HAL_OK)
-  {
-    UART_Recv_Error_Handler();
-  }
+        {
+        UART_Recv_Error_Handler();
+        }
 	while (UartReady != SET)
-  {
-        FeedWDG();
-  }
+        {
+                FeedWDG();
+        }
         // deal with ATRCMD
         char *cmd = (char*)aRxBuffer;
         // ATRLOGD, print log data to uart port
         if(*(cmd+0) == 'A' && *(cmd+1) == 'T' && *(cmd+2) == 'R' && *(cmd+3) == 'L' && *(cmd+4) == 'O' && *(cmd+5) == 'G' && *(cmd+6) == 'D'  )
-{
+        {
                 PrintPowerData();
-}
+        }
         // ATRCONSW, swith to normal mode
         else if(*(cmd+0) == 'A' && *(cmd+1) == 'T' && *(cmd+2) == 'R' && *(cmd+3) == 'C' && *(cmd+4) == 'O' && *(cmd+5) == 'N' && *(cmd+6) == 'S'){
                 break;
+        }
 }
 /****************************** Normal Mode ********************************************************/
 // Into normal mode, send atcmd to DSP
