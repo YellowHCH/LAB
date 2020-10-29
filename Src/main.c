@@ -432,7 +432,7 @@ while (COUNT_ONCE_PER_DAY > waitOneHour){
         char *cmd = (char*)aRxBuffer;
         // ATRLOGD, print log data to uart port
         if(*(cmd+0) == 'A' && *(cmd+1) == 'T' && *(cmd+2) == 'R' && *(cmd+3) == 'L' && *(cmd+4) == 'O' && *(cmd+5) == 'G' && *(cmd+6) == 'D'  )
-}{
+{
                 PrintPowerData();
 }
         // ATRCONSW, swith to normal mode
