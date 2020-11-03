@@ -137,6 +137,7 @@ void myItoa(int res, char *des);
 /*0. ATT */
 void ATRefresh(void);
 void ATTest(void);
+void ATMODE(int *ans);
 /*1.	Turn on/off DAC/ADC Clock*/
 void Turn_On_DAAD_Clk(void);
 void Turn_Off_DAAD_Clk(void);
@@ -184,10 +185,12 @@ void SourceSelect(uint8_t choice);
  *
  * */
 void PAChannleSelect(uint8_t choice);
-
+/* 17. ATMSG='MESSAGE TO BE DISPLAY'*/
+void ATMSG(uint8_t *msg);
+void ATMSGLog(uint8_t *msg, uint16_t size);
 /* For Special Condition*/
-void PrintPowerData();
-
+void PrintPowerData(void);
+void Test_PrintLogInfo(void);
 /* Test Uart Communication Betwen STM32 and Dsp*/
 void TestUart(void);
 

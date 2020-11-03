@@ -43,7 +43,7 @@ uint32_t uwPrescalerValue = 0;
 #define SECONDS_PER_TIM 2
 #define SECONDS_PER_TASK 24*60*60
 // COUNTS_PRE_TASK = SECONDS_PER_TASK / SECONDS_PER_TIM
-#define COUNTS_PRE_TASK 60
+#define COUNTS_PRE_TASK 150
 #define COUNTS_PRE_TASK_TWO_DAY 24*60*60
 #define COUNTS_PRE_TASK_WEEK    7*24*60*60/2
 static uint32_t Count_per_task = COUNTS_PRE_TASK;
@@ -51,10 +51,24 @@ bool waiting_status = true;
 static bool IsFirstTask = false;
 static uint32_t waitOneHour = 0;
 static uint32_t waitOneHour2 = 0;
+static uint16_t cnt_standby = 0;
+static uint16_t WaitNormalModeCnt = 100;
 ///************************///
-#define TASK_DAY_MAX	300
-double PowerRecord_1[TASK_DAY_MAX] __at(0x10000020);
-double PowerRecord_2[TASK_DAY_MAX] __at(0x10002420);
+/*
+0000001,P,L,C,1.500000,1.123456->total 7+3+8+8+6=32 byte
+	info{
+		Date:7
+		P/0:1
+		L/0:1
+		C/0:1
+		power1:8
+		power2:8
+	}
+*/
+#define TASK_DAY_MAX	1
+//double PowerRecord_1[TASK_DAY_MAX] __at(0x10000020);
+//double PowerRecord_2[TASK_DAY_MAX] __at(0x10002420);
+char LogInfo[32*TASK_DAY_MAX] __at(0x10000020);
 ///************************///
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -259,8 +273,9 @@ int main(void)
 		Date = 0;
 		InitCurrentTime(&CurrentTimeInst);
 		// init PowerRecord
-		memset(PowerRecord_1, 0, sizeof(PowerRecord_1) / sizeof(double));
-		memset(PowerRecord_2, 0, sizeof(PowerRecord_2) / sizeof(double));
+//		memset(PowerRecord_1, 0, sizeof(PowerRecord_1) / sizeof(double));
+//		memset(PowerRecord_2, 0, sizeof(PowerRecord_2) / sizeof(double));
+		memset(LogInfo, 0, 32*TASK_DAY_MAX);
 	}
   /* STM32L4xx HAL library initialization:
        - Configure the Flash prefetch
@@ -417,39 +432,228 @@ int main(void)
     /* Initialization Error */
     Error_Handler();
   }
+	/****************wait mode***********************/
+	#if 0
+	Set_LED_Pins();
+	Set_DSP_Relay();
+	while(waitOneHour < 10){
+		FeedWDG();
+		HAL_Delay(500);
+	}
+	Reset_LED_Pins();
+	Reset_DSP_Relay();
+	#endif
+	
 /****************************** Standby Mode *******************************************************/
-// stay in standby mode for 24 hour
-while (COUNT_ONCE_PER_DAY > waitOneHour){
-        if(HAL_UART_Receive_IT(&UartHandle, (uint8_t *)aRxBuffer, 7) != HAL_OK)
+#if 1
+	// stay in standby mode for 24 hour
+Reset_DSP_Relay();
+Delay_Sec(5);
+Set_DSP_Relay();
+Set_LED_Pins();
+HAL_Delay(50);
+//	char msg[] = "hello #1\r\n";
+//	UART_SEND((uint8_t*)msg, strlen((char*)msg));
+//	Delay_Sec(2);FlashingFast();FlashingSlow();HAL_Delay(50);FlashingFast();FlashingSlow();HAL_Delay(50);FlashingFast();FlashingSlow();
+	Delay_Sec(10);
+	//FlashingFast();
+Reset_LED_Pins();
+//	msg[7] = '2';
+//	UART_SEND((uint8_t*)msg, strlen((char*)msg));
+HAL_Delay(50);
+//ATTest();
+	bool b_wait_atrcmd = true;
+	static uint32_t wait_cnt = 0;
+//	static uint16_t cnt_standby = 0;
+//	static uint16_t WaitNormalModeCnt = 100;
+/* important info: wait sec must less than task_per_day*/
+while ( (waitOneHour < 120)  && b_wait_atrcmd){
+	
+	/*******************/
+	// sync mode
+	//ATMODE()
+	#if 1
+	FeedWDG();
+	Set_LED_Pins();
+	wait_cnt++;
+	// more than 200 times,breakout, about 3s per loop
+	if(wait_cnt > 70){
+		break;
+	}
+	/***************/
+	int sync_ans = 0;
+	if(HAL_UART_Init(&UartHandle) != HAL_OK)
+		{
+			UART_Error_Handler();
+		}
+		
+		HAL_Delay(500);
+		HAL_Delay(500);
+		ATMODE(&sync_ans);
+//	switch(sync_ans){
+//		case 0:
+//			// error
+//			FlashingSlow();Set_LED_Pins();
+//			break;
+//		case 1:
+//			// recv OK
+//			FlashingSlow();FlashingFast();Set_LED_Pins();
+//			break;
+//		case 2:
+//			// recv SW
+//			b_wait_atrcmd = false;
+//			FlashingFast();FlashingSlow();FlashingFast();FlashingFast();Set_LED_Pins();
+//			break;
+//		case 3:
+//			// recv LG
+//			FlashingSlow();FlashingSlow();Set_LED_Pins();
+//			break;
+//		default: break;
+//	}
+	if (sync_ans == 0){
+		// error
+			FlashingSlow();Set_LED_Pins();
+	}
+	else if (sync_ans == 1){
+	// recv OK
+//			FlashingSlow();FlashingSlow();FlashingFast();Set_LED_Pins();
+	}
+	else if(sync_ans == 2){
+	// recv SW
+			b_wait_atrcmd = false;
+//			FlashingFast();FlashingSlow();FlashingFast();FlashingFast();Set_LED_Pins();
+			
+	}
+	else if(sync_ans == 3){
+		// recv LD
+//			FlashingSlow();FlashingSlow();Set_LED_Pins();
+		PrintPowerData();
+	}
+	else if(sync_ans == 4){
+		// Hold Mode
+		wait_cnt = 0;
+		b_wait_atrcmd = true;
+		uint8_t reMsg[] = "Hold_On";
+		ATMSG(reMsg);
+	}
+	else{
+		;
+	}
+	#endif
+	// it mode
+	#if 0
+	FeedWDG();
+				Set_LED_Pins();
+				UartRecvLen = 0;
+				memset(aRxBuffer, 0, 12);
+	#if 1
+        if(HAL_UART_Receive_IT(&UartHandle, (uint8_t *)aRxBuffer, 11) != HAL_OK)
         {
-        UART_Recv_Error_Handler();
+					UART_Recv_Error_Handler();
         }
-	while (UartReady != SET)
-        {
-                FeedWDG();
-        }
-        // deal with ATRCMD
-        char *cmd = (char*)aRxBuffer;
-        // ATRLOGD, print log data to uart port
-        if(*(cmd+0) == 'A' && *(cmd+1) == 'T' && *(cmd+2) == 'R' && *(cmd+3) == 'L' && *(cmd+4) == 'O' && *(cmd+5) == 'G' && *(cmd+6) == 'D'  )
-        {
-                PrintPowerData();
-        }
-        // ATRCONSW, swith to normal mode
-        else if(*(cmd+0) == 'A' && *(cmd+1) == 'T' && *(cmd+2) == 'R' && *(cmd+3) == 'C' && *(cmd+4) == 'O' && *(cmd+5) == 'N' && *(cmd+6) == 'S'){
-                break;
-        }
+				else {
+					FlashingFast();FlashingFast();
+				}
+//					uint16_t ans = HAL_UART_Receive_IT(&UartHandle, (uint8_t *)aRxBuffer, 11);
+//					if (ans == HAL_OK){
+//						FlashingFast();
+//					}
+//					else if(ans == HAL_ERROR){
+//						FlashingFast();FlashingSlow();
+//					}
+//					else if(ans == HAL_BUSY){
+//						FlashingFast();FlashingSlow();
+//						FlashingFast();
+//					}
+	#endif
+//				Delay_Sec(2);FlashingFast();FlashingSlow();FlashingFast();
+
+		while(  cnt_standby < 100){
+			cnt_standby = cnt_standby+1;
+				if (UartRecvReady == SET){
+					FeedWDG();
+					UartRecvReady = RESET;
+					// deal with ATRCMD
+					char *cmd = (char*)aRxBuffer;
+					// ATRLOGD, print log data to uart port
+					if(*(cmd+2) == 'A' && *(cmd+3) == 'T' && *(cmd+4) == 'R' && *(cmd+5) == 'L' && *(cmd+6) == 'O' && *(cmd+7) == 'G' && *(cmd+8) == 'D'  )
+					{
+//									PrintPowerData();HAL_Delay(50);FlashingFast();
+//						uint8_t tmpmsg = '0';
+//						ATMSG(&tmpmsg);
+					}
+					// ATRCONSW, swith to normal mode
+					else if(*(cmd+2) == 'A' && *(cmd+3) == 'T' && *(cmd+4) == 'R' && *(cmd+5) == 'C' && *(cmd+6) == 'O' && *(cmd+7) == 'N' && *(cmd+8) == 'S'){
+//						FlashingSlow();HAL_Delay(50);			
+						b_wait_atrcmd = false;
+					}
+					break;
+			}
+				Delay_Sec(2);
+			FlashingFast();
+			Set_LED_Pins();
+				FeedWDG();
+//			HAL_Delay(50);
+//			ATTest();
+		}
+		FeedWDG();
+		Delay_Sec(1);
+		Reset_LED_Pins();
+		#endif
+		// pooling mode
+		#if 0
+		memset(aRxBuffer, 0, 12);
+		Set_LED_Pins();
+		
+			if (HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, 11, 10000) == HAL_OK){
+				/*%%%%%%%%%%%%%%%%%%%%*/
+				//b_wait_atrcmd = false;
+//				FlashingFast();
+				// deal with ATRCMD
+				char *cmd = (char*)aRxBuffer;
+				// ATRLOGD, print log data to uart port
+					if(*(cmd+2) == 'A' && *(cmd+3) == 'T' && *(cmd+4) == 'R' && *(cmd+5) == 'L' && *(cmd+6) == 'O' && *(cmd+7) == 'G' && *(cmd+8) == 'D'  )
+				{
+								//PrintPowerData();HAL_Delay(50);FlashingFast();
+//					uint8_t tmpmsg = '0';
+//					ATMSG(&tmpmsg);
+//					FlashingFast();
+				}
+					else if(*(cmd+2) == 'A' && *(cmd+3) == 'T' && *(cmd+4) == 'R' && *(cmd+5) == 'C' && *(cmd+6) == 'O' && *(cmd+7) == 'N' && *(cmd+8) == 'S')
+				{
+					b_wait_atrcmd = false;
+				}
+			}
+			else{
+				// 
+				FeedWDG();
+			}
+			Reset_LED_Pins();
+		#endif
+				// delay 2s
+			FeedWDG();
+//			FlashingFast();FlashingSlow();
+//			cnt_standby = cnt_standby+1;
+//			FlashingFast();
 }
+Reset_DSP_Relay();
+Reset_LED_Pins();
+wait_cnt = 0;
+#endif
 /****************************** Normal Mode ********************************************************/
 // Into normal mode, send atcmd to DSP
 // flash twice to indicate into normal mode
 #ifdef Debug
-	FlashingFast();
-	FlashingFast();
+//	FlashingFast();
+//	HAL_Delay(100);
+//	FlashingFast();
+//	while(1){
+//		FlashingFast();
+//		HAL_Delay(100);
+//	}
 #endif
   while (1)
   {
-		
 		Set_LED_Pins();
 		HAL_Delay(50);
 		Reset_LED_Pins();
@@ -471,6 +675,8 @@ while (COUNT_ONCE_PER_DAY > waitOneHour){
 
 		// run task		
 		/* 拉高继电器控制引脚电平，给控制板和发射板上电 */
+		Reset_DSP_Relay();
+		Delay_Sec(5);
 		Set_DSP_Relay();
 		//Set_TxRx_Relay1();
 		//Set_TxRx_Relay2();
@@ -479,7 +685,8 @@ while (COUNT_ONCE_PER_DAY > waitOneHour){
 //			FeedWDG();
 //			HAL_Delay(1000);
 //		}
-		Delay_Sec(5);
+		// need to wait more than 11s
+		Delay_Sec(11);
 		/* 打开串口，进行指令传输 */
 		if(HAL_UART_Init(&UartHandle) != HAL_OK)
 		{
@@ -605,7 +812,7 @@ void Task_Run(){
 	 /* Feed WDG , 10 seconds once*/
 		FeedWDG();
 	/* 10. Generate CW Pulse */
-	 GenCWPulse(200, 10, 1.0);HAL_Delay(10);
+	 GenCWPulse(200, 10, 0.9);HAL_Delay(10);
 	 /* Feed WDG , 10 seconds once*/
 		FeedWDG();
 	/* 11. Generate LFM Pulse */
@@ -613,7 +820,7 @@ void Task_Run(){
 	 /* Feed WDG , 10 seconds once*/
 		FeedWDG();
 	/* 12. Generate LFM2 Pulse */
-	 GenLFM2Pulse(400, 1, 2, 1.1, 14);HAL_Delay(10);
+	 GenLFM2Pulse(400, 1, 2, 0.9, 14);HAL_Delay(10);
 	 /* Feed WDG , 10 seconds once*/
 		FeedWDG();
 	/* 13. System Reset */
@@ -918,7 +1125,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   */
 void Error_Handler(void)
 {
-  while (1)
+  while (0)
   {
   }
 }
@@ -926,14 +1133,14 @@ void Error_Handler(void)
 
 /*#################    UART PART    ###################################*/
 void UART_Error_Handler(void){
-	while(1){
+	while(0){
 		HAL_Delay(10);
 		BSP_LED_Toggle(LED2);
 	}
 }
 
 static void UART_SEND_Error_Handler(void){
-	while(1){
+	while(0){
 		HAL_Delay(10);
 		BSP_LED_Toggle(LED2);
 	}
@@ -953,7 +1160,7 @@ void UART_CheckOK_Error_Handler(void){
 }
 
 void UART_Callback_Error_Handler(void){
-	while(1){
+	while(0){
 		HAL_Delay(10);
 		BSP_LED_Toggle(LED2);
 	}
@@ -982,8 +1189,8 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 {
   /* Set transmission flag: transfer complete */
-  UartReady = SET;
-
+  UartRecvReady = SET;
+	
 }
 
 void UART_SEND(uint8_t *tx, uint16_t size){
@@ -997,6 +1204,7 @@ void UART_SEND(uint8_t *tx, uint16_t size){
 //		}
 //		HAL_Delay(1);
 //	}
+	#if 0
 	if(HAL_UART_Transmit_IT(&UartHandle, (uint8_t*)(ptr), size)!= HAL_OK) //bufSize TXBUFFERSIZE
 		{
 			//Error_Handler(); 
@@ -1007,11 +1215,26 @@ void UART_SEND(uint8_t *tx, uint16_t size){
   UartReady = RESET;
 	/* Feed WDG , 10 seconds once*/
 	FeedWDG();
-//	if(HAL_UART_Transmit(&UartHandle, (uint8_t*)aTxBuffer, size, 5000)!= HAL_OK) //bufSize TXBUFFERSIZE
-//  {
-//    //Error_Handler(); 
-//		UART_SEND_Error_Handler();
-//  }
+	#endif
+	
+	#if 1
+	if(HAL_UART_Transmit(&UartHandle, (uint8_t*)aTxBuffer, size, 5000)!= HAL_OK) //bufSize TXBUFFERSIZE
+  {
+    //Error_Handler(); 
+		UART_SEND_Error_Handler();
+  }
+	#endif
+//		for(int idx = 0; idx < size; ++idx){
+//			if(HAL_UART_Transmit_IT(&UartHandle, (uint8_t*)(tx+idx), 1)!= HAL_OK) //bufSize TXBUFFERSIZE
+//			{
+//				//Error_Handler(); 
+//				UART_SEND_Error_Handler();
+//			}
+//			while(UartReady != SET){}
+//			/* Reset transmission flag */
+//			UartReady = RESET;
+//			HAL_Delay(10);
+//		}
 }
 void UART_RECV(uint16_t size){
 	#if 0
@@ -1027,7 +1250,7 @@ void UART_RECV(uint16_t size){
   UartReady = RESET;
         #endif
 	#if 1
-	if(HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, size, 500) != HAL_OK)
+	if(HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, size, 1000) != HAL_OK)
   {
     //Error_Handler();  
 		UART_Recv_Error_Handler();
@@ -1059,9 +1282,9 @@ void UART_RECV_IT(uint16_t size){
   }
 	while (UartReady != SET)
   {
-        FeedWDG();
+        //FeedWDG();
   }
-
+	FeedWDG();
   /* Reset transmission flag */
   UartReady = RESET;
         #endif
@@ -1115,9 +1338,13 @@ void TestUart(void){
 //	Set_Pins();
 	HAL_Delay(100);
 //	// test 0
+		/*############### AT Test ####################*/
   	ATTest();
   	HAL_Delay(500);
-		ATRefresh();
+		/*############################################*/
+//		ATRefresh();
+//				HAL_Delay(500);
+				
 //	// test 1
 //	Turn_On_DAAD_Clk();
 //	HAL_Delay(500);
@@ -1133,13 +1360,88 @@ void TestUart(void){
 //	HAL_Delay(500);
 //	Turn_Off_AD_Clk();
 //	HAL_Delay(500);
-	// test 4
-	PingTest();
+	// test 10
+//	GenCWPulse(150, 20, 0.9);
+//	HAL_Delay(500);
+	
+//	GenLFMPulse(120, 150, 0.9, 1);
+//	HAL_Delay(500);
+//	// test 12
+	/*********************************/
+	/*############ Tx PALFM ##############*/
+	GenLFM2Pulse(150, 3, 7, 0.9, 2);
 	HAL_Delay(500);
-	ATRefresh();
+	
+	Turn_On_TGC();
+	HAL_Delay(500);
+	SourceSelect(1);
+	HAL_Delay(500);
+	PAChannleSelect(3);
+	HAL_Delay(500);
+
+	PingSaveDataToSD(1.23,3.21, 3);
+	Delay_Sec(6);
+	HAL_Delay(1000);
+	/*############## Tx CW ################*/
+	GenCWPulse(150, 20, 0.9);
+	HAL_Delay(500);
+	Turn_Off_TGC();
+	SetInitGain(1);
+	HAL_Delay(500);
+	SourceSelect(0);
+	HAL_Delay(500);
+	PAChannleSelect(3);
+	HAL_Delay(500);
 	PingSaveDataToSD(1.23,3.21, 1);
-	ATRefresh();
+	Delay_Sec(6);
+	/*############### Tx LFM ##############*/
+	GenLFMPulse(130, 170, 0.9, 1);
 	HAL_Delay(500);
+	Turn_On_TGC();
+	HAL_Delay(500);
+	SourceSelect(0);
+	HAL_Delay(500);
+	PAChannleSelect(3);
+	HAL_Delay(500);
+	PingSaveDataToSD(1.23,3.21, 2);
+	Delay_Sec(6);
+	/*################ Log ####################*/
+	double pow2 = 0.0, pow3 = 0.0;
+	pow3 = ReadLowSpeedADC(3);
+	HAL_Delay(1000);
+	pow2 = ReadLowSpeedADC(2);
+	HAL_Delay(1000);
+	/* atention:!!!! LogPos size is 300*32 byte*/
+	if(1){
+		char* LogPos = LogInfo;
+		//0000001,PLC,1.500000,1.123456->total 7+3+8+8+6=30 byte
+		sprintf(LogPos, "%07hu,P00,%.6f,%.6f\r", Date, pow2, pow3);
+		if((Date-1)%3 == 0){
+			// LFM Tx per/3 days
+			LogPos[9] = 'L';
+		}
+		if((Date-1)%5 == 0){
+			// CW Tx per/5 days
+			LogPos[10] = 'C';
+		}
+		ATMSG((uint8_t*)LogPos);
+	}
+	/*#########################################*/
+	/*******************************/
+//	uint8_t msg122[40] = "ATMSG=\"msgtest000\"\r";
+//				ATMSG(msg122);
+//				HAL_Delay(500);
+//				HAL_Delay(500);
+//				HAL_Delay(500);
+////				HAL_Delay(500);
+////				HAL_Delay(500);
+//		ATTest();
+//  	HAL_Delay(500);
+				
+//	ATRefresh();
+//	PingSaveDataToSD(1.23,3.21, 1);
+//	ATRefresh();
+//	HAL_Delay(500);
 //	// test 5
 //	Turn_On_TGC();
 //	HAL_Delay(500);
@@ -1166,10 +1468,18 @@ void TestUart(void){
 //	// test 12
 //	GenLFM2Pulse(400, 1, 2, 1.1, 1);
 //	HAL_Delay(500);
-// test 13
-	
-//	ATRefresh();ReadLowSpeedADC(2);ATRefresh();
-//	HAL_Delay(50);
+//// test 13
+//	double p1 = 0.0, p2 = 0.0, p3 = 0.0;
+//	p1 = ReadLowSpeedADC(3);
+//	Delay_Sec(1);
+//	p2 = ReadLowSpeedADC(2);
+//	HAL_Delay(1000);
+//	p3 = ReadLowSpeedADC(2);
+//	HAL_Delay(1000);
+//	uint8_t tmpPower[40] = "Power:";
+//	sprintf((char*)tmpPower+6, "%.6f,%.6f,%.6f", p1, p2, p3);
+//	HAL_UART_Transmit(&UartHandle, (uint8_t*)tmpPower, strlen((char*)tmpPower), 1000);
+//	UART_SEND(tmpPower, strlen((char*)tmpPower));
 //	Reset_Pins();
 // test 14
 //	SystemReset();
@@ -1228,6 +1538,46 @@ void ATTest(void){
 		FlashingFast();
 	#endif
 	}
+}
+
+void ATMODE(int *ans)
+{
+	uint8_t cmd[] = "ATT\r";
+//	uint8_t cmd[] = "ATPING\r";
+//	uint8_t cmd[] = "ATCODACLK=1\r";
+	// send cmd
+	UART_SEND(cmd, (COUNTOF(cmd) - 1));
+
+	// wait for OK
+	UartRecvLen = 0;
+	memset(aRxBuffer, '\0', 7);
+	UART_RECV(6);
+	char *ch = (char*)aRxBuffer;
+	//
+//	uint8_t msg00[20] = "ATMSG=";
+	*ans = 0;
+	if (*(ch+2) == 'O' && *(ch+3) == 'K'){
+		*ans = 1;
+//		strcat((char*)msg00, "#OK\r");
+//		UART_SEND((uint8_t*)msg00, strlen((char*)msg00));
+	
+	}
+	else if(*(ch+2) == 'S' && *(ch+3) == 'W'){
+		*ans = 2;
+//		strcat((char*)msg00, "#SW\r");
+//		UART_SEND((uint8_t*)msg00, strlen((char*)msg00));
+	
+	}
+	else if(*(ch+2) == 'L' && *(ch+3) == 'D'){
+		*ans = 3;
+//		strcat((char*)msg00, "#LD\r");
+//		UART_SEND((uint8_t*)msg00, strlen((char*)msg00));
+	
+	}
+	else if (*(ch+2) == 'H' && *(ch+3) == 'O'){
+		*ans = 4;
+	}
+	return;
 }
 
 /* 1.	Turn on/off DAC/ADC Clock */
@@ -1426,9 +1776,12 @@ void PingSaveDataToSD(double ChannelOneVolt, double ChannelTwoVolt, uint8_t choi
                 break;
         default: break;
         }
+	
 	char tmp[10] = "";
 	sprintf(tmp, "%07hu", Date);
-	++Date;
+	if (choice == 3){
+		++Date;
+	}
 	strncpy((char*)(cmd+9), tmp, strlen(tmp));
 	char tmpDay[10] = "";
 	char tmpHour[10] = "";
@@ -1438,6 +1791,7 @@ void PingSaveDataToSD(double ChannelOneVolt, double ChannelTwoVolt, uint8_t choi
 	sprintf(tmpHour, "%hu", CurrentTimeInst.Hour);
 	sprintf(tmpMin, "%hu", CurrentTimeInst.Minute);
 	sprintf(tmpSec, "%hu", CurrentTimeInst.Second);
+				/*
 	strcat((char*)cmd, ",");
 	strcat((char*)cmd, "Day:");
 	strcat((char*)cmd, tmpDay);
@@ -1455,7 +1809,7 @@ void PingSaveDataToSD(double ChannelOneVolt, double ChannelTwoVolt, uint8_t choi
 	strcat((char*)cmd, ",");
 	strcat((char*)cmd, volt1);
 	strcat((char*)cmd, ",");
-	strcat((char*)cmd, volt2);
+	strcat((char*)cmd, volt2);*/
 	strcat((char*)cmd, ENDFLAG);
 	// send cmd
 //	UART_SEND(cmd, (COUNTOF(cmd) - 1));
@@ -1471,7 +1825,9 @@ void PingSaveDataToSD(double ChannelOneVolt, double ChannelTwoVolt, uint8_t choi
 	memset(aRxBuffer, 0, RXBUFFERSIZE);
 	//UART_RECV(7);
         // busy wait 30s
+	FeedWDG();
 	HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, 7, 30*1000);
+	FeedWDG();
 	char *ch = (char*)aRxBuffer;
 	if(*(ch+0) != '\r' || *(ch+1) != '\n' || *(ch+2) != 'O' || *(ch+3) != 'K' || *(ch+4) != '\r' || *(ch+5) != '\n' || *(ch+6) != '>'){
 	#ifdef Debug
@@ -1816,16 +2172,19 @@ double ReadLowSpeedADC(uint16_t channel){
                 ;
         }
         #endif
-	// record to noninit ram
-				switch(channel){
-					case 2:
-						PowerRecord_1[Date % TASK_DAY_MAX] = power;
-						break;
-					case 3:
-						PowerRecord_2[Date % TASK_DAY_MAX] = power;
-						break;
-					default: break;
-				}
+//	// record to noninit ram
+//				switch(channel){
+//					case 2:
+//						PowerRecord_1[Date % TASK_DAY_MAX] = power;
+//						break;
+//					case 3:
+//						PowerRecord_2[Date % TASK_DAY_MAX] = power;
+//						break;
+//					default: break;
+//				}
+	// send to atmsg
+//	ATMSG((uint8_t *)valStr);
+//		UART_SEND((uint8_t *)valStr, strlen(valStr));
 	return power;
 }
 
@@ -1860,7 +2219,7 @@ void SystemReset(){
  * */
 void SourceSelect(uint8_t choice){
 	uint8_t cmd[] = "ATSRSEL=0\r";
-	uint8_t cmt[20] = "ATSRSEL=0\r";
+//	uint8_t cmt[20] = "ATSRSEL=0\r";
 //	if( choice == 1){
 //		cmd[8] = (uint8_t)('1');
 //	}
@@ -1939,45 +2298,103 @@ void PAChannleSelect(uint8_t choice){
 	#endif
 	}
 }
-/* ########## */
-void PrintPowerData(){
-	//sprintf(gainTmp, "%f", gain);
-	uint8_t str[100] = "channel-2\n";
-	UART_SEND(str, (COUNTOF(str) - 1));
-	memset(str, 0, sizeof(str) / sizeof(uint8_t));
-	double power = 0;
-	char s_power[10] = {0};
-	FlashingFast();
-	for(int idx = 0; idx < TASK_DAY_MAX; ++idx){
-		power = PowerRecord_1[idx];
-		sprintf(s_power, "%f", power);
-		sprintf((char*)str, "%d: ", idx);
-		strcat((char*)str, s_power);
-		strcat((char*)str, "\n");
-		UART_SEND(str, (COUNTOF(str) - 1));
-		memset(str, 0, sizeof(str) / sizeof(uint8_t));
-		FeedWDG();
+
+/* 17. ATMSG='MESSAGE TO BE DISPLAY'*/
+void ATMSG(uint8_t *msg)
+{
+	uint8_t cmd2[80] = "ATMSG=test2020\r";
+	//strcat((char*)cmd, ENDFLAG);
+//	strcat((char*)cmd, "\r\n");
+	// send cmd
+	if(msg != '\0' && strlen((char*)msg) < 70){
+		strcpy((char*)(cmd2+6), (char*)msg);
+		strcat((char*)cmd2, "\r");
+//		UART_SEND(msg, strlen((char*)msg));
 	}
+	else{
+		cmd2[10] = '9';
+		cmd2[11] = '9';
+//		UART_SEND(cmd2, strlen((char*)cmd2));
+	}
+	UART_SEND(cmd2, strlen((char*)cmd2));
 	
-	sprintf((char*)str, "\nchannel-3\n");
-	UART_SEND(str, (COUNTOF(str) - 1));
-	memset(str, 0, sizeof(str) / sizeof(uint8_t));
-	memset(s_power, 0, sizeof(s_power));
-	FlashingFast();
-	for(int idx = 0; idx < TASK_DAY_MAX; ++idx){
-		power = PowerRecord_2[idx];
-		sprintf(s_power, "%f", power);
-		sprintf((char*)str, "%d: ", idx);
-		strcat((char*)str, s_power);
-		strcat((char*)str, "\n");
-		UART_SEND(str, (COUNTOF(str) - 1));
-		memset(str, 0, sizeof(str) / sizeof(uint8_t));
+	// wait for OK
+	UartRecvLen = 0;
+	memset(aRxBuffer, 0, 8);
+	HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, 7, 2*1000);
+	char *ch = (char*)aRxBuffer;
+	if(*(ch+0) != '\r' || *(ch+1) != '\n' || *(ch+2) != 'O' || *(ch+3) != 'K' || *(ch+4) != '\r' || *(ch+5) != '\n' || *(ch+6) != '>'){
+	#ifdef Debug
+		FlashingSlow();
+	#endif
+		UART_CheckOK_Error_Handler();
+	}
+	else{
+	#ifdef Debug
+		FlashingFast();
+	#endif
+	}
+}
+
+void ATMSGLog(uint8_t *msg, uint16_t size)
+{
+	uint8_t cmd2[80] = "ATMSG=test2020";
+	//strcat((char*)cmd, ENDFLAG);
+	if(*msg != '\0'){
+		sprintf((char*)(cmd2+6), "%s",(char*)msg);
+	}
+	else{
+		;
+	}
+	HAL_UART_Transmit(&UartHandle, (uint8_t*)cmd2, strlen((char*)cmd2), 1000);
+	
+	// wait for OK
+	UartRecvLen = 0;
+	memset(aRxBuffer, 0, 8);
+	HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, 7, 2*1000);
+	char *ch = (char*)aRxBuffer;
+	if(*(ch+0) != '\r' || *(ch+1) != '\n' || *(ch+2) != 'O' || *(ch+3) != 'K' || *(ch+4) != '\r' || *(ch+5) != '\n' || *(ch+6) != '>'){
+	#ifdef Debug
+		FlashingSlow();
+	#endif
+		UART_CheckOK_Error_Handler();
+	}
+	else{
+	#ifdef Debug
+		FlashingFast();
+	#endif
+	}
+}
+
+/* ##### send local log to uart ##### */
+void PrintPowerData(void){
+	FeedWDG();
+	// LogInfo[32*TASK_DAY_MAX]
+	char *LogPos = NULL;
+	for (int idx = 0; idx < TASK_DAY_MAX; ++idx){
 		FeedWDG();
+		LogPos = LogInfo + 32*idx;
+		
+		if (*LogPos == 0){
+			
+			break;
+		}
+		else{
+			//HAL_UART_Transmit(&UartHandle, (uint8_t*)LogPos, 32, 1000);
+			ATMSGLog((uint8_t*)LogPos, 31);
+			/* wait 1s for DSP record data, maybe not enough*/
+			HAL_Delay(1000);
+		}
 	}
 	
 }
 
-
+void Test_PrintLogInfo(void)
+{
+	/* test print log */
+	sprintf(LogInfo, "1234567,PLC,1.123456,0.123456\r\n");
+	PrintPowerData();
+}
 
 /**
   * @brief  UART error callbacks
